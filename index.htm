@@ -1,7 +1,7 @@
 <html>
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>pengo</title>
+		<title>🐧Pengo🐧</title>
 	</head>
 	<body>
 
@@ -21,9 +21,10 @@
 			let ctx = canvas.getContext("2d");
 			let centerX = width / 2;
 			let centerY = heigth / 2;
-			let inverse = true;
+			let inverse = false;
 			let tickNum = 0;
 			let numSpirals = 0;
+			let maxSpirals = 80; // Do not rip cpu
 			const maxSteps = 15;
 			const numRepeatingBreathingFrames = 300;
 			const rotationSpeed = inverse ? -3 : 3;
@@ -39,7 +40,7 @@
 				ctx.fillRect(0,0,width,heigth);
 				
 				if (tickNum % numRepeatingBreathingFrames === 0) {
-					numSpirals++;
+					numSpirals = Math.min(numSpirals + 1, maxSpirals);
 					refreshColors();
 				}
 				ctx.lineWidth = getStrokeWidth(tickNum);
