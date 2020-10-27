@@ -15,12 +15,13 @@
 			const MIN_GRADIENT_VALUE = 1e-10;
 			const canvas = document.getElementById("mieps");
 			let width = window.innerWidth;
-			let heigth = window.innerHeight;
+			let height = window.innerHeight;
+			let biggerDimension = Math.max(width, height);
 			canvas.width = width;
-			canvas.height = heigth;
+			canvas.height = height;
 			let ctx = canvas.getContext("2d");
 			let centerX = width / 2;
-			let centerY = heigth / 2;
+			let centerY = height / 2;
 			let inverse = false;
 			let tickNum = 0;
 			let numSpirals = 0;
@@ -37,7 +38,7 @@
 
 			function tick() {
 				ctx.fillStyle = "black";
-				ctx.fillRect(0,0,width,heigth);
+				ctx.fillRect(0,0,width,height);
 				
 				if (tickNum % numRepeatingBreathingFrames === 0) {
 					numSpirals = Math.min(numSpirals + 1, maxSpirals);
@@ -65,7 +66,7 @@
 				gradient.addColorStop(0.5, 'rgba(0,0,0,1)');
 				gradient.addColorStop(0, 'rgba(0,0,0,1)');
 				ctx.fillStyle = gradient;
-				ctx.fillRect(0, 0, width, heigth);
+				ctx.fillRect(0, 0, width, height);
 			}
 			
 			function gradientSphericalOverlay() {
@@ -77,11 +78,11 @@
 				gradient.addColorStop(0, 'rgba(0,0,0,0)');
 				gradient.addColorStop(1, 'rgba(0,0,0,1)');
 				ctx.fillStyle = gradient;
-				ctx.fillRect(0, 0, width, heigth);
+				ctx.fillRect(0, 0, width, height);
 			}
 			
 			function randomRadialGradient() {
-				let gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.SQRT2 * width / 2);
+				let gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.SQRT2 * biggerDimension / 2);
 				gradient.addColorStop(0, colorToString(randomColor()));
 				gradient.addColorStop(0.2, colorToString(randomColor()));
 				gradient.addColorStop(0.4, colorToString(randomColor()));
@@ -117,11 +118,11 @@
 				if (inverse) {
 					return getClipRadiusInverse(currentTick);
 				}
-				return (Math.cos(Math.PI + Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * Math.SQRT2 * width / 2;
+				return (Math.cos(Math.PI + Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * Math.SQRT2 * biggerDimension / 2;
 			}
 			
 			function getClipRadiusInverse(currentTick) {
-				return (Math.cos(Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * width;
+				return (Math.cos(Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * biggerDimension;
 			}
 			
 			function clip() {
@@ -234,12 +235,13 @@
 			
 			window.addEventListener('resize', event => {
 				width = window.innerWidth;
-				heigth = window.innerHeight;
+				height = window.innerHeight;
 				canvas.width = width;
-				canvas.height = heigth;
+				canvas.height = height;
 				ctx = canvas.getContext("2d");
 				centerX = width / 2;
-				centerY = heigth / 2;
+				centerY = height / 2;
+				biggerDimension = Math.max(width, height);
 			});
 		</script>
 		<style>
