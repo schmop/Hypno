@@ -1,0 +1,315 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>pengo</title>
+	</head>
+	<body>
+
+		<canvas id="mieps" width="300px" height="300px"></canvas>
+		<label class="switch">
+			<input type="checkbox" onclick="javascript:toggleDirection()">
+			<span class="slider round"></span>
+		</label>
+		<script type="text/javascript">
+			
+			const MIN_GRADIENT_VALUE = 1e-10;
+			const canvas = document.getElementById("mieps");
+			let width = window.innerWidth;
+			let heigth = window.innerHeight;
+			canvas.width = width;
+			canvas.height = heigth;
+			let ctx = canvas.getContext("2d");
+			let centerX = width / 2;
+			let centerY = heigth / 2;
+			let inverse = true;
+			let tickNum = 0;
+			let numSpirals = 0;
+			const maxSteps = 15;
+			const numRepeatingBreathingFrames = 300;
+			const rotationSpeed = inverse ? -3 : 3;
+
+			let spiralColors;
+			
+			function toggleDirection() {
+				inverse = !inverse;
+			}
+
+			function tick() {
+				ctx.fillStyle = "black";
+				ctx.fillRect(0,0,width,heigth);
+				
+				if (tickNum % numRepeatingBreathingFrames === 0) {
+					numSpirals++;
+					refreshColors();
+				}
+				ctx.lineWidth = getStrokeWidth(tickNum);
+				rotateAround(centerX, centerY, 0.01 * rotationSpeed * tickNum);
+
+				for (let i = 0; i < numSpirals; i++) {
+					ctx.strokeStyle = colorToString(spiralColors[i]);
+					drawSpiral(centerX, centerY, 1, Math.PI * 2 / numSpirals * i, maxSteps);
+				}
+				
+				rotateAround(centerX, centerY, -0.01 * rotationSpeed * tickNum);
+				
+				gradientSphericalOverlay();
+				
+				tickNum++;
+				requestAnimationFrame(tick);
+			}
+			
+			function gradientSphericalOverlayInverse() {
+				let gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(getClipRadiusInverse(tickNum), MIN_GRADIENT_VALUE));
+				gradient.addColorStop(1, 'rgba(0,0,0,0)');
+				gradient.addColorStop(0.5, 'rgba(0,0,0,1)');
+				gradient.addColorStop(0, 'rgba(0,0,0,1)');
+				ctx.fillStyle = gradient;
+				ctx.fillRect(0, 0, width, heigth);
+			}
+			
+			function gradientSphericalOverlay() {
+				if (inverse) {
+					return gradientSphericalOverlayInverse();
+				}
+				
+				let gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(getClipRadius(tickNum), MIN_GRADIENT_VALUE));
+				gradient.addColorStop(0, 'rgba(0,0,0,0)');
+				gradient.addColorStop(1, 'rgba(0,0,0,1)');
+				ctx.fillStyle = gradient;
+				ctx.fillRect(0, 0, width, heigth);
+			}
+			
+			function randomRadialGradient() {
+				let gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.SQRT2 * width / 2);
+				gradient.addColorStop(0, colorToString(randomColor()));
+				gradient.addColorStop(0.2, colorToString(randomColor()));
+				gradient.addColorStop(0.4, colorToString(randomColor()));
+				gradient.addColorStop(0.6, colorToString(randomColor()));
+				gradient.addColorStop(1, colorToString(randomColor()));
+				
+				return gradient;
+			}
+			
+			function rotateAround(x, y, angle) {
+				ctx.translate(x, y);
+				ctx.rotate(angle);
+				ctx.translate(-x, -y);
+			}
+			
+			function refreshColors() {
+				spiralColors = Array(numSpirals).fill(null).map(() => randomRadialGradient());
+			}
+			
+			function getStrokeWidth(currentTick) {
+				if (inverse) {
+					return getStrokeWidthInverse(currentTick);
+				}
+				
+				return (Math.cos(Math.PI + Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * 3;
+			}
+			
+			function getStrokeWidthInverse(currentTick) {
+				return (Math.cos(-Math.PI + Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * 3;
+			}
+			
+			function getClipRadius(currentTick) {
+				if (inverse) {
+					return getClipRadiusInverse(currentTick);
+				}
+				return (Math.cos(Math.PI + Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * Math.SQRT2 * width / 2;
+			}
+			
+			function getClipRadiusInverse(currentTick) {
+				return (Math.cos(Math.PI * 2 / numRepeatingBreathingFrames * currentTick) + 1) / 2 * width;
+			}
+			
+			function clip() {
+				ctx.save();
+				ctx.beginPath();
+				ctx.arc(centerX, centerY, getClipRadius(tickNum), 0, Math.PI * 2);
+				ctx.clip();
+			}
+			
+			function unclip() {
+				ctx.restore();
+			}
+			
+			/*
+			 * direction 0: 
+				draw circle down left
+				attach next rectangle to the right
+			 * direction 1: 
+				draw circle down right
+				attach next rectangle to the top
+			 * direction 2: 
+				draw circle up right
+				attach next rectangle to the left
+			 * direction 3: 
+				draw circle up left
+				attach next rectangle to the bottom
+			*/
+			function drawSpiral(centerX, centerY, startRadius, angleOffset, steps, renderSquare = false) {
+				rotateAround(centerX, centerY, angleOffset);
+				let posX = centerX;
+				let posY = centerY;
+				let lastFib = 0;
+				let fib = 1;
+				for (let i = 0; i < steps; i++) {
+					let curFib = lastFib + fib;
+					let radius = startRadius * curFib;
+					let lastRadius = startRadius * fib;
+					let direction = i % 4;
+					let startAngle;
+					let cCenterX, cCenterY;
+					
+					switch (direction) {
+						case 0: // down right
+							posX += lastRadius;
+							posY -= radius - lastRadius;
+							cCenterX = posX;
+							cCenterY = posY;
+							startAngle = Math.PI / 2;
+
+							break;
+						case 1:
+							posX -= radius - lastRadius;
+							posY -= radius;
+							cCenterX = posX;
+							cCenterY = posY + radius;
+							startAngle = Math.PI * 2;
+							
+							break;
+						case 2:
+							posX -= radius;
+							cCenterX = posX + radius;
+							cCenterY = posY + radius;
+							startAngle = Math.PI * 3 / 2;
+							
+							break;
+						case 3:
+							posY += lastRadius;
+							cCenterX = posX + radius;
+							cCenterY = posY;
+							startAngle = Math.PI;
+							
+							break;
+					}
+					let color = randomColor();
+					ctx.fillStyle = colorToString(color);
+					if (renderSquare) {
+						ctx.fillRect(posX, posY, radius, radius);
+					}
+					ctx.beginPath();
+					const endAngle = startAngle - Math.PI / 2;
+					ctx.arc(cCenterX, cCenterY, radius, startAngle, endAngle, true);
+					ctx.stroke();
+					lastFib = fib;
+					fib = curFib;
+				}
+				rotateAround(centerX, centerY, -angleOffset);
+
+			}
+			
+			function colorToString(color) {
+				if (color instanceof CanvasGradient) {
+					return color;
+				}
+				return "rgb(" + color.join(', ') + ")";
+			}
+			
+			function complementaryColor(color) {
+				return [255 - color[0], 255 - color[1], 255 - color[2]];
+			}
+			
+			function randomColor() {
+				return  Array(3).fill(null).map(() => Math.floor(Math.random() * 255));
+			}
+			
+			function fibonacci(n) {
+				return n <= 1 ? 1 : fib(n - 1) + fib(n - 2);
+			}
+
+			tick();
+			
+			window.addEventListener('resize', event => {
+				width = window.innerWidth;
+				heigth = window.innerHeight;
+				canvas.width = width;
+				canvas.height = heigth;
+				ctx = canvas.getContext("2d");
+				centerX = width / 2;
+				centerY = heigth / 2;
+			});
+		</script>
+		<style>
+			body {
+				padding: 0;
+				margin: 0;
+			}
+			/* The switch - the box around the slider */
+			.switch {
+			  position: absolute;
+			  display: inline-block;
+			  width: 60px;
+			  height: 34px;
+			  top: 25px;
+			  left: 25px;
+			}
+
+			/* Hide default HTML checkbox */
+			.switch input {
+			  opacity: 0;
+			  width: 0;
+			  height: 0;
+			}
+
+			/* The slider */
+			.slider {
+			  position: absolute;
+			  cursor: pointer;
+			  top: 0;
+			  left: 0;
+			  right: 0;
+			  bottom: 0;
+			  background-color: #4a4a4a;
+			  -webkit-transition: .4s;
+			  transition: .4s;
+			}
+
+			.slider:before {
+			  position: absolute;
+			  content: "";
+			  height: 26px;
+			  width: 26px;
+			  left: 4px;
+			  bottom: 4px;
+			  background-color: white;
+			  -webkit-transition: .4s;
+			  transition: .4s;
+			}
+
+			input:checked + .slider {
+			  background-color: #008c18;
+			}
+
+			input:focus + .slider {
+			  box-shadow: 0 0 1px #008c18;
+			}
+
+			input:checked + .slider:before {
+			  -webkit-transform: translateX(26px);
+			  -ms-transform: translateX(26px);
+			  transform: translateX(26px);
+			}
+
+			/* Rounded sliders */
+			.slider.round {
+			  border-radius: 34px;
+			}
+
+			.slider.round:before {
+			  border-radius: 50%;
+			}
+		</style>
+	</body>
+</html>
